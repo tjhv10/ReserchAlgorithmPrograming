@@ -12,7 +12,7 @@ class Project:
         return self.cost
     def __str__(self):
         supporter_strings = ", ".join(str(s) for s in self.supporters)
-        return f"Project: {self.name}, Cost: {self.cost}, Initial Supporters: [{supporter_strings}]"
+        return f"Project: {self.name}, Cost: {self.cost}, Initial Supporters: [{supporter_strings} sum:{sum(self.suppurter)}]"
     
     
 class Doner:
@@ -61,7 +61,7 @@ def cstv_budgeting(projects,doners, budget):
         if excess<0:
             break
         for project in projects:
-            print(project.get_name(),project.supporters[0])
+            print(project.get_name(),project.supporters[0],"sum:", sum(project.supporters[0]))
         selected_projects.append(max_excess_project)
         gama = max_excess_project.get_cost()/(excess+max_excess_project.get_cost())
         print("gama:",gama)  
@@ -76,7 +76,7 @@ def cstv_budgeting(projects,doners, budget):
         k = find_project_index(projectsnames,max_excess_project.get_name())
         projects = reset_donations(projects,k)
         for project in projects:
-            print(project.get_name(),project.supporters[0])
+            print(project.get_name(),project.supporters[0],"sum:", sum(project.supporters[0]))
         print("---------------")
         budget -= max_excess_project.cost
         # Step 6: Checking eligibility of remaining projects
@@ -89,9 +89,9 @@ def cstv_budgeting(projects,doners, budget):
 
 
 # Example usage
-project_A = Project("A", 1)
+project_A = Project("A", 30)
 project_B = Project("B", 30)
-project_C = Project("C", 42.7)
+project_C = Project("C", 20)
 doner1 = Doner([5,10,5])
 doner2 = Doner([10,10,0])
 doner3 = Doner([0,15,5])
@@ -103,10 +103,6 @@ project_C.add_support([5, 0, 5, 20, 0])
 
 projects = [project_A, project_B, project_C]
 doners = [doner1,doner2,doner3,doner4,doner5]
-
-
 selected_projects = cstv_budgeting(projects,doners, 100)
-
 for project in selected_projects:
     print(f"Selected Project: {project.name}, Cost: {project.cost}")
-
