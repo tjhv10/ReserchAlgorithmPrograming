@@ -74,6 +74,25 @@ class TestFunctions(unittest.TestCase):
             i+=1
         self.assertEqual(calculate_total_initial_support(self.projects), 100)
 
+
+
+    def test_distribute_excess_support(self):
+        self.doner1.update_donations([5,10,5])
+        self.doner2.update_donations([10,10,0])
+        self.doner3.update_donations([0,15,5])
+        self.doner4.update_donations([0,0,20])
+        self.doner5.update_donations([15,5,0])
+        self.projects = update_projects_support(self.projects,self.doners)
+        max_excess_project,stam = select_max_excess_project(self.projects)
+        gama = 0.5
+        updated_projects = distribute_excess_support(self.projects, max_excess_project, self.doners, gama)
+        expected_support_A = [7.5, 15.0, 0.0, 0, 22.5]  # No change expected for max_excess_project
+        expected_support_B = [10, 10, 15, 0, 5]
+        expected_support_C = [7.5, 0.0, 7.5, 20, 0.0]
+        self.assertEqual(updated_projects[0].support, expected_support_A)
+        self.assertEqual(updated_projects[1].support, expected_support_B)
+        self.assertEqual(updated_projects[2].support, expected_support_C)
+
     def test_calculate_excess_support(self):
         i =0
         for project in self.projects:
@@ -107,32 +126,44 @@ class TestFunctions(unittest.TestCase):
         self.assertEqual(selected_projects, [])
 
     def test_cstv_budgeting_with_budget_less_than_min_project_cost(self):
-        self.project_A.update_support([5, 0, 0, 0, 5])
-        self.project_B.update_support([0, 0, 5, 0, 5])
-        self.project_C.update_support([5, 0, 5,0, 0])
+        self.doner1.update_donations([5,0,0])
+        self.doner2.update_donations([2,2,1])
+        self.doner3.update_donations([4,0,1])
+        self.doner4.update_donations([1,0,4])
+        self.doner5.update_donations([1,1,3])
+        self.projects = update_projects_support(self.projects,self.doners)
         selected_projects = cstv_budgeting(self.projects, self.doners)
         self.assertEqual(selected_projects, [])
 
     def test_cstv_budgeting_with_budget_greater_than_max_total_needed_support(self):
-        self.project_A.update_support([10, 20, 0, 0, 30])
-        self.project_B.update_support([20, 20, 30, 0, 10])
-        self.project_C.update_support([10, 0, 10, 40, 0])
+        self.doner1.update_donations([0,0,30])
+        self.doner2.update_donations([30,0,0])
+        self.doner3.update_donations([0,15,15])
+        self.doner4.update_donations([25,0,5])
+        self.doner5.update_donations([0,30,0])
+        self.projects = update_projects_support(self.projects,self.doners)
         selected_projects = cstv_budgeting(self.projects, self.doners)
         self.assertEqual(len(selected_projects), len(self.projects))
-        self.assertEqual([project.name for project in selected_projects], ['B', 'A', 'C'])
+        self.assertEqual([project.name for project in selected_projects], ['A', 'B', 'C'])
 
     def test_cstv_budgeting_with_budget_between_min_and_max(self):
-        self.project_A.update_support([5, 10, 0, 0, 15])
-        self.project_B.update_support([10, 10, 15, 0, 5])
-        self.project_C.update_support([5, 0, 5, 20, 0])
+        self.doner1.update_donations([5,10,5])
+        self.doner2.update_donations([10,10,0])
+        self.doner3.update_donations([0,15,5])
+        self.doner4.update_donations([0,0,20])
+        self.doner5.update_donations([15,5,0])
+        self.projects = update_projects_support(self.projects,self.doners)
         selected_projects = cstv_budgeting(self.projects, self.doners)
         self.assertEqual(len(selected_projects), 2)
         self.assertEqual([project.name for project in selected_projects], ['B', 'A'])
 
     def test_cstv_budgeting_with_budget_exactly_matching_requierd_support(self):
-        self.project_A.update_support([10, 20, 0, 0, 7])
-        self.project_B.update_support([20, 10, 0, 0, 0])
-        self.project_C.update_support([0, 0, 0, 25, 15])
+        self.doner1.update_donations([10,20,0])
+        self.doner2.update_donations([20,10,0])
+        self.doner3.update_donations([0,0,0])
+        self.doner4.update_donations([0,0,25])
+        self.doner5.update_donations([7,0,15])
+        self.projects = update_projects_support(self.projects,self.doners)
         selected_projects = cstv_budgeting(self.projects, self.doners)
         self.assertEqual(len(selected_projects), 3)
         self.assertEqual([project.name for project in selected_projects], ['A', 'B', 'C'])
@@ -150,44 +181,42 @@ class TestCSTVBudgetingNonLegalInput(unittest.TestCase):
             cstv_budgeting(projects, doners)
 
 class TestCSTVBudgetingLargeInput(unittest.TestCase):
-    def setUp(self):
+    def test_cstv_budgeting_large_input(self):
         # Creating a large number of projects and doners
         num_projects = 100
         num_doners = 100
-        self.projects = [Project(f"Project_{i}", 10) for i in range(num_projects)]
+        self.projects = [Project(f"Project_{i}", 50) for i in range(50)]
+        self.projects += [Project(f"Project_{i+50}", 151) for i in range(50)]
+        
         self.doners = [Doner([1] * num_projects) for _ in range(num_doners)]
+        self.projects = update_projects_support(self.projects,self.doners)
 
-        # Assigning random support to projects from doners
-        for doner in self.doners:
-            for project in self.projects:
-                project.update_support([1] * num_doners)
-
-    def test_cstv_budgeting_large_input(self):
         # Running the budgeting algorithm with a large input
         selected_projects = cstv_budgeting(self.projects, self.doners)
-        self.assertEqual(len(selected_projects), 100)
-        self.assertEqual(len(selected_projects), len(self.projects))
+        self.assertEqual(len(selected_projects), len(self.projects)-1)
 
 
 class TestCSTVBudgetingLargeRandomInput(unittest.TestCase):
-    def setUp(self):
+    def test_cstv_budgeting_large_random_input(self):
         # Creating 100 projects with random costs between 10 and 100
-        self.projects = [Project(f"Project_{i}", random.randint(10, 100)) for i in range(100)]
+        self.projects = [Project(f"Project_{i}", random.randint(100, 1000)) for i in range(100)]
         # Creating 100 doners with random donations between 0 and 50 for each project
-        self.doners = [Doner([random.randint(0, 50) for _ in range(len(self.projects))]) for _ in range(100)]
-        
+        self.doners = [Doner([random.randint(0, 5) for _ in range(len(self.projects))]) for _ in range(100)]
         # Assigning support for each project from the values of the doners
         self.projects = update_projects_support(self.projects,self.doners)
-    def test_cstv_budgeting_large_random_input(self):
-        cost = calculate_total_initial_support_doners(self.doners)
-        # Running the budgeting algorithm with a budget of 10000
+        positiveExcess = 0
+        for p in self.projects:
+           if calculate_excess_support(p)>=0:
+                positiveExcess+=1
+
+        support = calculate_total_initial_support_doners(self.doners)
         selected_projects = cstv_budgeting(self.projects, self.doners)
         sum = 0
         for project in selected_projects:
             sum+= project.get_cost()
-
-        # cost = calculate_total_initial_support(selected_projects)
-        self.assertGreaterEqual(cost,sum)
+        self.assertGreaterEqual(100,len(selected_projects))
+        self.assertGreaterEqual(len(selected_projects),positiveExcess)
+        self.assertGreaterEqual(support,sum)
 
 if __name__ == '__main__':
     unittest.main()
